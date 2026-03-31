@@ -1,0 +1,9 @@
+{
+  "name": "skillswap-workspace",
+  "private": true,
+  "scripts": {
+    "dev": "echo Use npm run dev:backend and npm run dev:frontend in separate terminals",
+    "dev:backend": "npm --prefix Backend run dev",
+    "dev:frontend": "npm --prefix Frontend run dev"
+  }
+}

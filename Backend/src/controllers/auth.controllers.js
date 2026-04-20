@@ -71,7 +71,12 @@ export const handleGoogleLoginCallback = asyncHandler(async (req, res) => {
   if (existingUser) {
     const jwtToken = generateJWTToken_username(existingUser);
     const expiryDate = new Date(Date.now() + 1 * 60 * 60 * 1000);
-    res.cookie("accessToken", jwtToken, { httpOnly: true, expires: expiryDate, secure: false });
+    res.cookie("accessToken", jwtToken, { 
+      httpOnly: true, 
+      expires: expiryDate, 
+      secure: true, 
+      sameSite: "none" 
+    });
     return res.redirect(`${process.env.FRONTEND_URL}/discover`);
   }
 
@@ -86,7 +91,12 @@ export const handleGoogleLoginCallback = asyncHandler(async (req, res) => {
   }
   const jwtToken = generateJWTToken_email(unregisteredUser);
   const expiryDate = new Date(Date.now() + 0.5 * 60 * 60 * 1000);
-  res.cookie("accessTokenRegistration", jwtToken, { httpOnly: true, expires: expiryDate, secure: false });
+  res.cookie("accessTokenRegistration", jwtToken, { 
+    httpOnly: true, 
+    expires: expiryDate, 
+    secure: true, 
+    sameSite: "none" 
+  });
   return res.redirect(`${process.env.FRONTEND_URL}/register`);
 });
 
@@ -159,7 +169,12 @@ export const handleVerifyEmail = asyncHandler(async (req, res) => {
 
   const jwtToken = generateJWTToken_email(unregisteredUser);
   const expiryDate = new Date(Date.now() + 0.5 * 60 * 60 * 1000);
-  res.cookie("accessTokenRegistration", jwtToken, { httpOnly: true, expires: expiryDate, secure: false });
+  res.cookie("accessTokenRegistration", jwtToken, { 
+    httpOnly: true, 
+    expires: expiryDate, 
+    secure: true, 
+    sameSite: "none" 
+  });
 
   // Redirect to register (onboarding) after successful verification
   return res.redirect(`${process.env.FRONTEND_URL}/register`);
@@ -180,7 +195,12 @@ export const handleLocalLogin = asyncHandler(async (req, res) => {
 
     const jwtToken = generateJWTToken_username(existingUser);
     const expiryDate = new Date(Date.now() + 1 * 60 * 60 * 1000);
-    res.cookie("accessToken", jwtToken, { httpOnly: true, expires: expiryDate, secure: false });
+    res.cookie("accessToken", jwtToken, { 
+      httpOnly: true, 
+      expires: expiryDate, 
+      secure: true, 
+      sameSite: "none" 
+    });
     return res.status(200).json(new ApiResponse(200, { redirect: "/discover" }, "Login successful"));
   }
 
@@ -195,7 +215,12 @@ export const handleLocalLogin = asyncHandler(async (req, res) => {
 
     const jwtToken = generateJWTToken_email(unregisteredUser);
     const expiryDate = new Date(Date.now() + 0.5 * 60 * 60 * 1000);
-    res.cookie("accessTokenRegistration", jwtToken, { httpOnly: true, expires: expiryDate, secure: false });
+    res.cookie("accessTokenRegistration", jwtToken, { 
+      httpOnly: true, 
+      expires: expiryDate, 
+      secure: true, 
+      sameSite: "none" 
+    });
     return res.status(200).json(new ApiResponse(200, { redirect: "/register" }, "Login successful. Please complete profile."));
   }
 

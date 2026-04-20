@@ -110,6 +110,9 @@ export const requestMeeting = asyncHandler(async (req, res, next) => {
     console.error("Failed to send meeting request email:", emailErr.message);
   }
 
+  // Notify the receiver in real time
+  req.app.get("io")?.to(receiverId.toString()).emit("meeting-update");
+
   res.status(201).json(new ApiResponse(201, meeting, "Meeting requested successfully"));
 });
 
@@ -162,6 +165,9 @@ export const acceptMeeting = asyncHandler(async (req, res, next) => {
     console.error("Failed to send meeting accepted email:", emailErr.message);
   }
 
+  // Notify the original requester in real time
+  req.app.get("io")?.to(meeting.requester.toString()).emit("meeting-update");
+
   res.status(200).json(new ApiResponse(200, meeting, "Meeting accepted successfully"));
 });
 
@@ -195,6 +201,9 @@ export const rejectMeeting = asyncHandler(async (req, res, next) => {
     console.error("Failed to send meeting rejected email:", emailErr.message);
   }
 
+  // Notify the original requester in real time
+  req.app.get("io")?.to(meeting.requester.toString()).emit("meeting-update");
+
   res.status(200).json(new ApiResponse(200, null, "Meeting rejected successfully"));
 });
 
@@ -210,7 +219,11 @@ export const cancelMeeting = asyncHandler(async (req, res, next) => {
     throw new ApiError(404, "Pending meeting not found or you are not authorized to cancel it");
   }
 
+  const receiverId = meeting.receiver;
   await Meeting.deleteOne({ _id: meetingId });
+
+  // Notify the receiver in real time
+  req.app.get("io")?.to(receiverId.toString()).emit("meeting-update");
 
   res.status(200).json(new ApiResponse(200, null, "Meeting cancelled successfully"));
 });

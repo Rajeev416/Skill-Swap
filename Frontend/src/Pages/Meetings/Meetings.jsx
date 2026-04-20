@@ -9,6 +9,8 @@ import {
 } from "react-icons/fi";
 import "./Meetings.css";
 
+import io from "socket.io-client";
+
 /* ─── Countdown hook ─────────────────────────────────── */
 const useCountdown = (targetDate) => {
   const calc = useCallback(() => {
@@ -45,6 +47,8 @@ const Countdown = ({ targetDate }) => {
   );
 };
 
+let socket;
+
 /* ─── Main Component ─────────────────────────────────── */
 const Meetings = () => {
   const { user, setUser } = useUser();
@@ -53,11 +57,7 @@ const Meetings = () => {
   const [loading, setLoading] = useState(true);
   const [activeTab, setActiveTab] = useState("upcoming");
 
-  useEffect(() => {
-    fetchMeetings();
-  }, []);
-
-  const fetchMeetings = async () => {
+  const fetchMeetings = useCallback(async () => {
     try {
       setLoading(true);
       const { data } = await axios.get("/meeting");
@@ -73,7 +73,32 @@ const Meetings = () => {
     } finally {
       setLoading(false);
     }
-  };
+  }, [navigate, setUser]);
+
+  // Initial fetch
+  useEffect(() => {
+    fetchMeetings();
+  }, [fetchMeetings]);
+
+  // Socket Connection for Real-Time Updates
+  useEffect(() => {
+    socket = io(axios.defaults.baseURL);
+    if (user) {
+      socket.emit("setup", user);
+    }
+
+    const handleUpdate = () => {
+      fetchMeetings();
+    };
+
+    socket.on("meeting-update", handleUpdate);
+
+    return () => {
+      socket.off("meeting-update", handleUpdate);
+      socket.disconnect();
+    };
+  }, [user, fetchMeetings]);
+
 
   const handleAccept = async (meetingId) => {
     try {

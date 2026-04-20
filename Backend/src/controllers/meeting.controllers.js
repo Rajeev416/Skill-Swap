@@ -111,7 +111,11 @@ export const requestMeeting = asyncHandler(async (req, res, next) => {
   }
 
   // Notify the receiver in real time
-  req.app.get("io")?.to(receiverId.toString()).emit("meeting-update");
+  const requesterObj = await User.findById(requesterId).select("name");
+  req.app.get("io")?.to(receiverId.toString()).emit("meeting-update", {
+    action: "request",
+    message: `New meeting request from ${requesterObj?.name || 'someone'}`,
+  });
 
   res.status(201).json(new ApiResponse(201, meeting, "Meeting requested successfully"));
 });
@@ -166,7 +170,10 @@ export const acceptMeeting = asyncHandler(async (req, res, next) => {
   }
 
   // Notify the original requester in real time
-  req.app.get("io")?.to(meeting.requester.toString()).emit("meeting-update");
+  req.app.get("io")?.to(meeting.requester.toString()).emit("meeting-update", {
+    action: "accept",
+    message: "Your meeting request was accepted!",
+  });
 
   res.status(200).json(new ApiResponse(200, meeting, "Meeting accepted successfully"));
 });
@@ -202,7 +209,10 @@ export const rejectMeeting = asyncHandler(async (req, res, next) => {
   }
 
   // Notify the original requester in real time
-  req.app.get("io")?.to(meeting.requester.toString()).emit("meeting-update");
+  req.app.get("io")?.to(meeting.requester.toString()).emit("meeting-update", {
+    action: "reject",
+    message: "Your meeting request was declined.",
+  });
 
   res.status(200).json(new ApiResponse(200, null, "Meeting rejected successfully"));
 });
@@ -223,7 +233,10 @@ export const cancelMeeting = asyncHandler(async (req, res, next) => {
   await Meeting.deleteOne({ _id: meetingId });
 
   // Notify the receiver in real time
-  req.app.get("io")?.to(receiverId.toString()).emit("meeting-update");
+  req.app.get("io")?.to(receiverId.toString()).emit("meeting-update", {
+    action: "cancel",
+    message: "A pending meeting request was canceled.",
+  });
 
   res.status(200).json(new ApiResponse(200, null, "Meeting cancelled successfully"));
 });

@@ -87,8 +87,11 @@ const Meetings = () => {
       socket.emit("setup", user);
     }
 
-    const handleUpdate = () => {
+    const handleUpdate = (data) => {
       fetchMeetings();
+      if (data && data.message) {
+        toast.info(data.message);
+      }
     };
 
     socket.on("meeting-update", handleUpdate);

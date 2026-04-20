@@ -252,11 +252,12 @@ const Chats = () => {
 
     setScheduleLoading(true);
     try {
-      await axios.post("/user/sendScheduleMeet", {
-        ...scheduleForm,
-        username: selectedChat.username,
+      await axios.post("/meeting/request", {
+        receiverId: selectedChat._id,
+        scheduledTime: selectedDateTime.toISOString(),
+        topic: "Video Call Request from Chat",
       });
-      toast.success("Request mail has been sent successfully!");
+      toast.success("Meeting requested successfully! Check your Meetings Hub.");
       setScheduleForm({ date: "", time: "" });
       setScheduleModalShow(false);
     } catch (error) {

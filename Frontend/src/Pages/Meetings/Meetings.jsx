@@ -75,9 +75,11 @@ const Meetings = () => {
     }
   }, [navigate, setUser]);
 
-  // Initial fetch
+  // Initial fetch + periodic refresh (catches expired meetings)
   useEffect(() => {
     fetchMeetings();
+    const interval = setInterval(fetchMeetings, 60000); // Refresh every 60s
+    return () => clearInterval(interval);
   }, [fetchMeetings]);
 
   // Socket Connection for Real-Time Updates

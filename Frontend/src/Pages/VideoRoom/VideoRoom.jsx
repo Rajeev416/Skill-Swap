@@ -45,6 +45,7 @@ const VideoRoom = () => {
   const [remoteScreenSharing, setRemoteScreenSharing] = useState(false);
   const [peerHasLeft, setPeerHasLeft] = useState(false);
   const [error, setError] = useState(null);
+  const [userRole, setUserRole] = useState(null); // "sender" | "receiver"
 
   // End-meeting permission for receiver (10 min after joining)
   const [canEndMeeting, setCanEndMeeting] = useState(false);
@@ -63,6 +64,26 @@ const VideoRoom = () => {
 
   const userName = user?.name || "Guest";
   const userId = user?._id || Date.now().toString();
+
+  // ─── Determine user role (sender vs receiver) ──────────
+  useEffect(() => {
+    const fetchRole = async () => {
+      try {
+        const { data } = await axios.get("/meeting");
+        const meeting = data.data?.find((m) => m.roomId === roomId);
+        if (meeting) {
+          if (meeting.requester?._id === userId) {
+            setUserRole("sender");
+          } else {
+            setUserRole("receiver");
+          }
+        }
+      } catch (err) {
+        console.error("Failed to determine meeting role:", err);
+      }
+    };
+    fetchRole();
+  }, [roomId, userId]);
 
   // ─── Get local media stream ────────────────────────────
   const getLocalStream = useCallback(async () => {
@@ -440,12 +461,31 @@ const VideoRoom = () => {
 
   const endCall = useCallback(async () => {
     try {
-      // Mark meeting as completed
+      // Mark meeting as completed on server
       await axios.post("/meeting/end", { roomId });
     } catch (err) {
       console.error("Failed to end meeting on server:", err);
     }
 
+    // Stop all local tracks
+    localStreamRef.current?.getTracks().forEach((t) => t.stop());
+    screenStreamRef.current?.getTracks().forEach((t) => t.stop());
+
+    // Close peer connection
+    if (peerConnectionRef.current) {
+      peerConnectionRef.current.close();
+      peerConnectionRef.current = null;
+    }
+
+    // Notify server and disconnect
+    socketRef.current?.emit("leave-video-room", { roomId });
+    socketRef.current?.disconnect();
+
+    navigate("/meetings");
+  }, [roomId, navigate]);
+
+  // Leave call (sender only — does NOT end the meeting on backend)
+  const leaveCall = useCallback(() => {
     // Stop all local tracks
     localStreamRef.current?.getTracks().forEach((t) => t.stop());
     screenStreamRef.current?.getTracks().forEach((t) => t.stop());
@@ -716,16 +756,21 @@ const VideoRoom = () => {
             )}
           </button>
 
-          {canEndMeeting ? (
-            <button className="vr-ctrl-btn end" onClick={endCall} title="End call">
+          {/* Sender: Leave anytime | Receiver: End Meeting after 10 min */}
+          {userRole === "sender" ? (
+            <button className="vr-ctrl-btn end" onClick={leaveCall} title="Leave call">
+              <FiPhoneOff size={20} />
+              <span>Leave</span>
+            </button>
+          ) : canEndMeeting ? (
+            <button className="vr-ctrl-btn end" onClick={endCall} title="End meeting">
               <FiPhoneOff size={20} />
               <span>End</span>
             </button>
           ) : (
             <button
               className="vr-ctrl-btn end"
-              onClick={endCall}
-              title={`End call available in ${Math.floor(endMeetingCountdown / 60)}:${String(endMeetingCountdown % 60).padStart(2, "0")}`}
+              title={`End meeting available in ${Math.floor(endMeetingCountdown / 60)}:${String(endMeetingCountdown % 60).padStart(2, "0")}`}
               disabled
             >
               <FiPhoneOff size={20} />

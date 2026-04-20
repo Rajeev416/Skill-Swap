@@ -49,6 +49,7 @@ export const googleAuthHandler = (req, res, next) => {
 
   return passport.authenticate("google", {
     scope: ["profile", "email"],
+    prompt: "select_account",
   })(req, res, next);
 };
 

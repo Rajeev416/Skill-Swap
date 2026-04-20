@@ -122,6 +122,23 @@ connectDB()
         });
       });
 
+      // ─── In-Call Chat Events ────────────────────────────
+      socket.on("room-chat-message", ({ roomId, message, senderName, senderId, timestamp }) => {
+        socket.to(roomId).emit("room-chat-message", {
+          message,
+          senderName,
+          senderId,
+          timestamp,
+        });
+      });
+
+      socket.on("room-typing", ({ roomId, userName, isTyping }) => {
+        socket.to(roomId).emit("room-typing", {
+          userName,
+          isTyping,
+        });
+      });
+
       // User leaves the video room
       socket.on("leave-video-room", ({ roomId }) => {
         socket.leave(roomId);

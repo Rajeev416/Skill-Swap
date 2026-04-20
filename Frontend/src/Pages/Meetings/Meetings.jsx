@@ -269,9 +269,6 @@ const Meetings = () => {
                       </div>
 
                       <div className="mtg-card-actions" style={{gap: "0.5rem"}}>
-                        <button onClick={() => handleEndMeeting(mtg._id)} className="mtg-btn cancel-btn" style={{flex: 0}}>
-                          <FiX /> Cancel
-                        </button>
                         {isReady ? (
                           <Link to={`/room/${mtg.roomId}`} className="mtg-btn join-btn">
                             <FiVideo /> Join Video Call

@@ -100,20 +100,6 @@ export const requestMeeting = asyncHandler(async (req, res, next) => {
 
   if (!meeting) return next(new ApiError(500, "Meeting request not created"));
 
-  // Send email notification to the receiver
-  try {
-    const receiver = await User.findById(receiverId).select("email name");
-    const requester = await User.findById(requesterId).select("name");
-    if (receiver?.email) {
-      await sendMail(
-        receiver.email,
-        `📹 New Meeting Request from ${requester.name}`,
-        meetingRequestEmail(requester.name, topic || "Skill Swap Consultation", scheduledTime)
-      );
-    }
-  } catch (emailErr) {
-    console.error("Failed to send meeting request email:", emailErr.message);
-  }
 
   // Notify the receiver in real time
   const requesterObj = await User.findById(requesterId).select("name");
@@ -136,7 +122,8 @@ export const getMeetings = asyncHandler(async (req, res, next) => {
   })
     .populate("requester", "username firstname lastname picture name email")
     .populate("receiver", "username firstname lastname picture name email")
-    .sort({ scheduledTime: -1 });
+    .sort({ scheduledTime: -1 })
+    .lean();
 
   return res.status(200).json(new ApiResponse(200, meetings, "Meetings fetched successfully"));
 });

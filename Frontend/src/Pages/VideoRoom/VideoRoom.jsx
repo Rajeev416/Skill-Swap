@@ -5,7 +5,8 @@ import io from "socket.io-client";
 import axios from "axios";
 import {
   FiMic, FiMicOff, FiVideo, FiVideoOff,
-  FiMonitor, FiPhoneOff, FiArrowLeft, FiLoader
+  FiMonitor, FiPhoneOff, FiArrowLeft, FiLoader,
+  FiMessageSquare, FiSend, FiX
 } from "react-icons/fi";
 import "./VideoRoom.css";
 
@@ -41,7 +42,17 @@ const VideoRoom = () => {
   const [remotePeerName, setRemotePeerName] = useState("");
   const [remoteMicOn, setRemoteMicOn] = useState(true);
   const [remoteCameraOn, setRemoteCameraOn] = useState(true);
+  const [remoteScreenSharing, setRemoteScreenSharing] = useState(false);
   const [error, setError] = useState(null);
+
+  // Chat state
+  const [isChatOpen, setIsChatOpen] = useState(false);
+  const [chatMessages, setChatMessages] = useState([]);
+  const [chatInput, setChatInput] = useState("");
+  const [isRemoteTyping, setIsRemoteTyping] = useState(false);
+  const [unreadCount, setUnreadCount] = useState(0);
+  const chatEndRef = useRef(null);
+  const typingTimeoutRef = useRef(null);
 
   const userName = user?.name || "Guest";
   const userId = user?._id || Date.now().toString();
@@ -245,6 +256,7 @@ const VideoRoom = () => {
     socket.on("peer-media-toggled", ({ type, enabled }) => {
       if (type === "audio") setRemoteMicOn(enabled);
       if (type === "video") setRemoteCameraOn(enabled);
+      if (type === "screen") setRemoteScreenSharing(enabled);
     });
 
     // Peer left
@@ -257,10 +269,68 @@ const VideoRoom = () => {
       }
     });
 
+    // ─── In-Call Chat Events ───────────────────────────
+    socket.on("room-chat-message", ({ message, senderName, senderId, timestamp }) => {
+      const newMsg = { message, senderName, senderId, timestamp, isOwn: false };
+      setChatMessages((prev) => [...prev, newMsg]);
+      // Increment unread if chat panel is closed
+      setUnreadCount((prev) => prev + 1);
+    });
+
+    socket.on("room-typing", ({ userName: typerName, isTyping: typing }) => {
+      setIsRemoteTyping(typing);
+    });
+
     socket.on("disconnect", () => {
       console.log("[Socket] Disconnected");
     });
   }, [roomId, userId, userName, getLocalStream, createPeerConnection, processPendingCandidates]);
+
+  // ─── Chat helpers ──────────────────────────────────────
+  const sendMessage = useCallback(() => {
+    const trimmed = chatInput.trim();
+    if (!trimmed || !socketRef.current) return;
+
+    const timestamp = Date.now();
+    const msg = { message: trimmed, senderName: userName, senderId: userId, timestamp, isOwn: true };
+    setChatMessages((prev) => [...prev, msg]);
+    setChatInput("");
+
+    socketRef.current.emit("room-chat-message", {
+      roomId, message: trimmed, senderName: userName, senderId: userId, timestamp,
+    });
+
+    // Stop typing indicator
+    socketRef.current.emit("room-typing", { roomId, userName, isTyping: false });
+  }, [chatInput, roomId, userName, userId]);
+
+  const handleChatInputChange = useCallback((e) => {
+    setChatInput(e.target.value);
+    if (!socketRef.current) return;
+
+    socketRef.current.emit("room-typing", { roomId, userName, isTyping: true });
+
+    // Clear previous timeout and set a new one
+    if (typingTimeoutRef.current) clearTimeout(typingTimeoutRef.current);
+    typingTimeoutRef.current = setTimeout(() => {
+      socketRef.current?.emit("room-typing", { roomId, userName, isTyping: false });
+    }, 1500);
+  }, [roomId, userName]);
+
+  const handleChatKeyDown = useCallback((e) => {
+    if (e.key === "Enter" && !e.shiftKey) {
+      e.preventDefault();
+      sendMessage();
+    }
+  }, [sendMessage]);
+
+  // Auto-scroll chat & reset unread
+  useEffect(() => {
+    if (isChatOpen) {
+      setUnreadCount(0);
+      chatEndRef.current?.scrollIntoView({ behavior: "smooth" });
+    }
+  }, [chatMessages, isChatOpen]);
 
   // ─── Media controls ────────────────────────────────────
   const toggleMic = useCallback(() => {
@@ -471,7 +541,7 @@ const VideoRoom = () => {
       {/* Video grid */}
       <div className="vr-video-grid">
         {/* Remote video — large */}
-        <div className="vr-remote-wrapper">
+        <div className={`vr-remote-wrapper ${remoteScreenSharing ? "remote-screen-sharing" : ""}`}>
           <video
             ref={remoteVideoRef}
             autoPlay
@@ -510,6 +580,57 @@ const VideoRoom = () => {
         </div>
       </div>
 
+      {/* ─── Chat Panel ─── */}
+      <div className={`vr-chat-panel ${isChatOpen ? "open" : ""}`}>
+        <div className="vr-chat-header">
+          <h3><FiMessageSquare size={16} /> In-Call Chat</h3>
+          <button className="vr-chat-close" onClick={() => setIsChatOpen(false)}>
+            <FiX size={18} />
+          </button>
+        </div>
+        <div className="vr-chat-messages">
+          {chatMessages.length === 0 && (
+            <div className="vr-chat-empty">
+              <FiMessageSquare size={28} />
+              <p>No messages yet. Say hi!</p>
+            </div>
+          )}
+          {chatMessages.map((msg, i) => (
+            <div key={i} className={`vr-chat-msg ${msg.isOwn ? "own" : "remote"}`}>
+              {!msg.isOwn && <span className="vr-chat-sender">{msg.senderName}</span>}
+              <div className="vr-chat-bubble">
+                {msg.message}
+              </div>
+              <span className="vr-chat-time">
+                {new Date(msg.timestamp).toLocaleTimeString([], { hour: "2-digit", minute: "2-digit" })}
+              </span>
+            </div>
+          ))}
+          {isRemoteTyping && (
+            <div className="vr-chat-typing">
+              <div className="vr-typing-dots">
+                <span /><span /><span />
+              </div>
+              <span>{remotePeerName || "Peer"} is typing...</span>
+            </div>
+          )}
+          <div ref={chatEndRef} />
+        </div>
+        <div className="vr-chat-input-bar">
+          <input
+            type="text"
+            className="vr-chat-input"
+            placeholder="Type a message..."
+            value={chatInput}
+            onChange={handleChatInputChange}
+            onKeyDown={handleChatKeyDown}
+          />
+          <button className="vr-chat-send" onClick={sendMessage} disabled={!chatInput.trim()}>
+            <FiSend size={16} />
+          </button>
+        </div>
+      </div>
+
       {/* Control bar */}
       <div className="vr-control-bar">
         <div className="vr-controls">
@@ -539,6 +660,18 @@ const VideoRoom = () => {
           >
             <FiMonitor size={20} />
             <span>{isScreenSharing ? "Sharing" : "Screen"}</span>
+          </button>
+
+          <button
+            className={`vr-ctrl-btn ${isChatOpen ? "active" : ""}`}
+            onClick={() => setIsChatOpen((prev) => !prev)}
+            title="Toggle chat"
+          >
+            <FiMessageSquare size={20} />
+            <span>Chat</span>
+            {unreadCount > 0 && !isChatOpen && (
+              <span className="vr-chat-badge">{unreadCount}</span>
+            )}
           </button>
 
           <button className="vr-ctrl-btn end" onClick={endCall} title="End call">

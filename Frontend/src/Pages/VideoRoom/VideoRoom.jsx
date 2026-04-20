@@ -35,7 +35,7 @@ const VideoRoom = () => {
   const isUnmountingRef = useRef(false);
 
   // State
-  const [connectionState, setConnectionState] = useState("lobby"); // lobby | connecting | connected | disconnected
+  const [connectionState, setConnectionState] = useState("lobby"); // lobby | connecting | connected
   const [isMicOn, setIsMicOn] = useState(true);
   const [isCameraOn, setIsCameraOn] = useState(true);
   const [isScreenSharing, setIsScreenSharing] = useState(false);
@@ -43,7 +43,14 @@ const VideoRoom = () => {
   const [remoteMicOn, setRemoteMicOn] = useState(true);
   const [remoteCameraOn, setRemoteCameraOn] = useState(true);
   const [remoteScreenSharing, setRemoteScreenSharing] = useState(false);
+  const [peerHasLeft, setPeerHasLeft] = useState(false);
   const [error, setError] = useState(null);
+
+  // End-meeting permission for receiver (10 min after joining)
+  const [canEndMeeting, setCanEndMeeting] = useState(false);
+  const [endMeetingCountdown, setEndMeetingCountdown] = useState(600); // 600 seconds = 10 min
+  const callJoinedAtRef = useRef(null);
+  const disconnectTimerRef = useRef(null);
 
   // Chat state
   const [isChatOpen, setIsChatOpen] = useState(false);
@@ -119,14 +126,28 @@ const VideoRoom = () => {
       console.log("[WebRTC] Connection state:", pc.connectionState);
       switch (pc.connectionState) {
         case "connected":
+          // Clear any pending disconnect timer
+          if (disconnectTimerRef.current) {
+            clearTimeout(disconnectTimerRef.current);
+            disconnectTimerRef.current = null;
+          }
           setConnectionState("connected");
           break;
         case "disconnected":
+          // WebRTC "disconnected" is temporary and recoverable (tab switch, screen share toggle)
+          // Only mark as truly gone after a 5 second grace period
+          if (disconnectTimerRef.current) clearTimeout(disconnectTimerRef.current);
+          disconnectTimerRef.current = setTimeout(() => {
+            // If still disconnected after 5s, check if the connection truly failed
+            if (pc.connectionState === "disconnected" || pc.connectionState === "failed") {
+              setPeerHasLeft(true);
+            }
+          }, 5000);
+          break;
         case "failed":
-          setConnectionState("disconnected");
+          setPeerHasLeft(true);
           break;
         case "closed":
-          setConnectionState("disconnected");
           break;
         default:
           break;
@@ -177,6 +198,7 @@ const VideoRoom = () => {
 
       // Join the video room
       socket.emit("join-video-room", { roomId, userId, userName });
+      callJoinedAtRef.current = Date.now();
     });
 
     // When existing peers are already in the room — we create the offer
@@ -259,10 +281,10 @@ const VideoRoom = () => {
       if (type === "screen") setRemoteScreenSharing(enabled);
     });
 
-    // Peer left
+    // Peer left — this is the ONLY reliable signal that the other user intentionally left
     socket.on("peer-left", ({ userName: peerName }) => {
       console.log("[Socket] Peer left:", peerName);
-      setConnectionState("disconnected");
+      setPeerHasLeft(true);
       setRemotePeerName("");
       if (remoteVideoRef.current) {
         remoteVideoRef.current.srcObject = null;
@@ -450,6 +472,7 @@ const VideoRoom = () => {
       peerConnectionRef.current?.close();
       socketRef.current?.emit("leave-video-room", { roomId });
       socketRef.current?.disconnect();
+      if (disconnectTimerRef.current) clearTimeout(disconnectTimerRef.current);
     };
   }, [roomId]);
 
@@ -459,6 +482,25 @@ const VideoRoom = () => {
       getLocalStream();
     }
   }, [connectionState, getLocalStream]);
+
+  // ─── 10 min countdown for End Meeting permission ────────
+  useEffect(() => {
+    if (connectionState !== "connected" || !callJoinedAtRef.current) return;
+
+    const interval = setInterval(() => {
+      const elapsed = Math.floor((Date.now() - callJoinedAtRef.current) / 1000);
+      const remaining = 600 - elapsed; // 10 minutes
+      if (remaining <= 0) {
+        setCanEndMeeting(true);
+        setEndMeetingCountdown(0);
+        clearInterval(interval);
+      } else {
+        setEndMeetingCountdown(remaining);
+      }
+    }, 1000);
+
+    return () => clearInterval(interval);
+  }, [connectionState]);
 
   // ─── Error state ────────────────────────────────────────
   if (error) {
@@ -532,7 +574,7 @@ const VideoRoom = () => {
           Waiting for the other participant to join...
         </div>
       )}
-      {connectionState === "disconnected" && (
+      {peerHasLeft && (
         <div className="vr-status-banner disconnected">
           The other participant has left the call.
         </div>
@@ -674,10 +716,22 @@ const VideoRoom = () => {
             )}
           </button>
 
-          <button className="vr-ctrl-btn end" onClick={endCall} title="End call">
-            <FiPhoneOff size={20} />
-            <span>End</span>
-          </button>
+          {canEndMeeting ? (
+            <button className="vr-ctrl-btn end" onClick={endCall} title="End call">
+              <FiPhoneOff size={20} />
+              <span>End</span>
+            </button>
+          ) : (
+            <button
+              className="vr-ctrl-btn end"
+              onClick={endCall}
+              title={`End call available in ${Math.floor(endMeetingCountdown / 60)}:${String(endMeetingCountdown % 60).padStart(2, "0")}`}
+              disabled
+            >
+              <FiPhoneOff size={20} />
+              <span>{Math.floor(endMeetingCountdown / 60)}:{String(endMeetingCountdown % 60).padStart(2, "0")}</span>
+            </button>
+          )}
         </div>
 
         <div className="vr-room-info">

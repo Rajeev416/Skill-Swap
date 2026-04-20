@@ -21,6 +21,7 @@ const Profile = () => {
   const [showMeetingModal, setShowMeetingModal] = useState(false);
   const [meetingTime, setMeetingTime] = useState("");
   const [meetingTopic, setMeetingTopic] = useState("");
+  const [meetingDuration, setMeetingDuration] = useState(30);
   const [meetingLoading, setMeetingLoading] = useState(false);
   const navigate = useNavigate();
 
@@ -80,12 +81,14 @@ const Profile = () => {
       const { data } = await axios.post(`/meeting/request`, { 
         receiverId: profileUser._id, 
         scheduledTime: new Date(meetingTime).toISOString(), 
-        topic: meetingTopic 
+        topic: meetingTopic,
+        duration: meetingDuration
       });
       toast.success(data.message);
       setShowMeetingModal(false);
       setMeetingTime("");
       setMeetingTopic("");
+      setMeetingDuration(30);
     } catch (error) {
       if (error?.response?.data?.message) {
         toast.error(error.response.data.message);
@@ -300,6 +303,16 @@ const Profile = () => {
                 placeholder="e.g. Discussing React Native"
                 value={meetingTopic}
                 onChange={(e) => setMeetingTopic(e.target.value)}
+              />
+
+              <label>Duration (minutes)</label>
+              <input 
+                type="number" 
+                placeholder="Minutes (15-120)"
+                value={meetingDuration}
+                onChange={(e) => setMeetingDuration(Math.max(15, Math.min(120, Number(e.target.value) || 15)))}
+                min={15}
+                max={120}
               />
 
               <label>Select Date & Time</label>

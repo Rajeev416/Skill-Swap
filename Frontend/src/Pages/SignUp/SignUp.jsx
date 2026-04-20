@@ -48,7 +48,7 @@ const SignUp = () => {
               name="name"
               value={formData.name}
               onChange={handleChange}
-              placeholder="John Doe"
+              placeholder="Enter your name"
               required
             />
           </div>
@@ -60,7 +60,7 @@ const SignUp = () => {
               name="email"
               value={formData.email}
               onChange={handleChange}
-              placeholder="you@example.com"
+              placeholder="Enter your email"
               required
             />
           </div>

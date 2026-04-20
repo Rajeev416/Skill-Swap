@@ -41,7 +41,7 @@ const Chats = () => {
   const [message, setMessage] = useState("");
   const [selectedRequest, setSelectedRequest] = useState(null);
   const [scheduleLoading, setScheduleLoading] = useState(false);
-  const [scheduleForm, setScheduleForm] = useState({ date: "", time: "" });
+  const [scheduleForm, setScheduleForm] = useState({ date: "", time: "", duration: 30 });
 
   const { user, setUser } = useUser();
   const navigate = useNavigate();
@@ -260,9 +260,10 @@ const Chats = () => {
         receiverId: selectedChat.userId,
         scheduledTime: selectedDateTime.toISOString(),
         topic: "Video Call Request from Chat",
+        duration: scheduleForm.duration
       });
       toast.success("Meeting requested successfully! Check your Meetings Hub.");
-      setScheduleForm({ date: "", time: "" });
+      setScheduleForm({ date: "", time: "", duration: 30 });
       setScheduleModalShow(false);
     } catch (error) {
       console.error(error);
@@ -467,6 +468,17 @@ const Chats = () => {
                   type="time"
                   value={scheduleForm.time}
                   onChange={(e) => setScheduleForm({ ...scheduleForm, time: e.target.value })}
+                />
+              </div>
+              <div className="chat-modal-field">
+                <label>Duration (minutes)</label>
+                <input
+                  type="number"
+                  placeholder="Minutes (15-120)"
+                  value={scheduleForm.duration}
+                  onChange={(e) => setScheduleForm({ ...scheduleForm, duration: Math.max(15, Math.min(120, Number(e.target.value) || 15)) })}
+                  min={15}
+                  max={120}
                 />
               </div>
               <div className="chat-modal-actions">

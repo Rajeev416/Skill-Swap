@@ -31,6 +31,7 @@ const VideoRoom = () => {
   const screenStreamRef = useRef(null);
   const socketRef = useRef(null);
   const pendingCandidatesRef = useRef([]);
+  const isUnmountingRef = useRef(false);
 
   // State
   const [connectionState, setConnectionState] = useState("lobby"); // lobby | connecting | connected | disconnected
@@ -48,10 +49,19 @@ const VideoRoom = () => {
   // ─── Get local media stream ────────────────────────────
   const getLocalStream = useCallback(async () => {
     try {
+      if (localStreamRef.current) {
+        localStreamRef.current.getTracks().forEach((t) => t.stop());
+      }
       const stream = await navigator.mediaDevices.getUserMedia({
         video: { width: { ideal: 1280 }, height: { ideal: 720 }, facingMode: "user" },
         audio: { echoCancellation: true, noiseSuppression: true },
       });
+      
+      if (isUnmountingRef.current) {
+        stream.getTracks().forEach((t) => t.stop());
+        return null;
+      }
+
       localStreamRef.current = stream;
       if (localVideoRef.current) {
         localVideoRef.current.srcObject = stream;
@@ -336,7 +346,14 @@ const VideoRoom = () => {
     }
   }, [isScreenSharing, roomId]);
 
-  const endCall = useCallback(() => {
+  const endCall = useCallback(async () => {
+    try {
+      // Mark meeting as completed
+      await axios.post("/meeting/end", { roomId });
+    } catch (err) {
+      console.error("Failed to end meeting on server:", err);
+    }
+
     // Stop all local tracks
     localStreamRef.current?.getTracks().forEach((t) => t.stop());
     screenStreamRef.current?.getTracks().forEach((t) => t.stop());
@@ -357,6 +374,7 @@ const VideoRoom = () => {
   // ─── Cleanup on unmount ─────────────────────────────────
   useEffect(() => {
     return () => {
+      isUnmountingRef.current = true;
       localStreamRef.current?.getTracks().forEach((t) => t.stop());
       screenStreamRef.current?.getTracks().forEach((t) => t.stop());
       peerConnectionRef.current?.close();

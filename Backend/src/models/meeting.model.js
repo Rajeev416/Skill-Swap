@@ -20,6 +20,12 @@ const meetingSchema = new Schema(
       type: String,
       default: "Skill Swap Consultation",
     },
+    duration: {
+      type: Number,
+      default: 30, // Default duration in minutes
+      min: 15,
+      max: 120, // Max 2 hours
+    },
     status: {
       type: String,
       enum: ["Pending", "Accepted", "Rejected", "Completed"],

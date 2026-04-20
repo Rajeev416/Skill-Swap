@@ -71,7 +71,7 @@ const AboutUs = () => {
           {/* Vision Block */}
           <div className="au-block">
             <div className="au-block-visual">
-              <img src="/assets/images/about us.png" alt="Collaborative Learning" className="au-featured-img" />
+              <img src="/assets/images/about_us.png" alt="Collaborative Learning" className="au-featured-img" />
             </div>
             <div className="au-block-text">
               <h2>A Culture of Collaboration</h2>

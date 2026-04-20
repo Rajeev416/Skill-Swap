@@ -1,24 +1,35 @@
+import React, { Suspense, lazy, useEffect } from "react";
 import { Route, Routes, useLocation } from "react-router-dom";
-import { useEffect } from "react";
 import Footer from "./Components/Footer/Footer";
-import Discover from "./Pages/Discover/Discover";
-import Login from "./Pages/Login/Login";
 import Header from "./Components/Navbar/Navbar";
-import LandingPage from "./Pages/LandingPage/LandingPage";
-import AboutUs from "./Pages/AboutUs/AboutUs";
-import Chats from "./Pages/Chats/Chats";
-import Report from "./Pages/Report/Report";
-import Profile from "./Pages/Profile/Profile";
-import NotFound from "./Pages/NotFound/NotFound";
-import Register from "./Pages/Register/Register";
-import SignUp from "./Pages/SignUp/SignUp";
-import Meetings from "./Pages/Meetings/Meetings";
-import VideoRoom from "./Pages/VideoRoom/VideoRoom";
-import Rating from "./Pages/Rating/Rating";
-import EditProfile from "./Pages/EditProfile/EditProfile";
 import PrivateRoutes from "./util/PrivateRoutes";
+import ErrorBoundary from "./Components/ErrorBoundary/ErrorBoundary";
 import { ToastContainer } from "react-toastify";
+import { Spinner } from "react-bootstrap";
 import "react-toastify/dist/ReactToastify.css";
+
+// Lazy Loaded Routes
+const LandingPage = lazy(() => import("./Pages/LandingPage/LandingPage"));
+const Discover = lazy(() => import("./Pages/Discover/Discover"));
+const Login = lazy(() => import("./Pages/Login/Login"));
+const SignUp = lazy(() => import("./Pages/SignUp/SignUp"));
+const AboutUs = lazy(() => import("./Pages/AboutUs/AboutUs"));
+const Chats = lazy(() => import("./Pages/Chats/Chats"));
+const Report = lazy(() => import("./Pages/Report/Report"));
+const Profile = lazy(() => import("./Pages/Profile/Profile"));
+const Register = lazy(() => import("./Pages/Register/Register"));
+const Meetings = lazy(() => import("./Pages/Meetings/Meetings"));
+const VideoRoom = lazy(() => import("./Pages/VideoRoom/VideoRoom"));
+const Rating = lazy(() => import("./Pages/Rating/Rating"));
+const EditProfile = lazy(() => import("./Pages/EditProfile/EditProfile"));
+const NotFound = lazy(() => import("./Pages/NotFound/NotFound"));
+
+// Fallback Loader
+const FallbackLoader = () => (
+  <div className="d-flex justify-content-center align-items-center" style={{ minHeight: '80vh' }}>
+    <Spinner animation="border" style={{ color: "#3BB4A1" }} />
+  </div>
+);
 
 const ScrollToTop = () => {
   const { pathname, hash } = useLocation();
@@ -47,24 +58,28 @@ const App = () => {
       <ScrollToTop />
       {!isVideoRoom && <Header />}
       <ToastContainer position="top-right" />
-      <Routes>
-        <Route element={<PrivateRoutes />}>
-          <Route path="/chats" element={<Chats />} />
-          <Route path="/meetings" element={<Meetings />} />
-          <Route path="/room/:roomId" element={<VideoRoom />} />
-        </Route>
-        <Route path="/" element={<LandingPage />} />
-        <Route path="/login" element={<Login />} />
-        <Route path="/signup" element={<SignUp />} />
-        <Route path="/discover" element={<Discover />} />
-        <Route path="/register" element={<Register />} />
-        <Route path="/about_us" element={<AboutUs />} />
-        <Route path="/edit_profile" element={<EditProfile />} />
-        <Route path="/report/:username" element={<Report />} />
-        <Route path="/profile/:username" element={<Profile />} />
-        <Route path="/rating/:username" element={<Rating />} />
-        <Route path="*" element={<NotFound />} />
-      </Routes>
+      <ErrorBoundary>
+        <Suspense fallback={<FallbackLoader />}>
+          <Routes>
+            <Route element={<PrivateRoutes />}>
+              <Route path="/chats" element={<Chats />} />
+              <Route path="/meetings" element={<Meetings />} />
+              <Route path="/room/:roomId" element={<VideoRoom />} />
+            </Route>
+            <Route path="/" element={<LandingPage />} />
+            <Route path="/login" element={<Login />} />
+            <Route path="/signup" element={<SignUp />} />
+            <Route path="/discover" element={<Discover />} />
+            <Route path="/register" element={<Register />} />
+            <Route path="/about_us" element={<AboutUs />} />
+            <Route path="/edit_profile" element={<EditProfile />} />
+            <Route path="/report/:username" element={<Report />} />
+            <Route path="/profile/:username" element={<Profile />} />
+            <Route path="/rating/:username" element={<Rating />} />
+            <Route path="*" element={<NotFound />} />
+          </Routes>
+        </Suspense>
+      </ErrorBoundary>
 
       {!isVideoRoom && <Footer />}
     </>

@@ -135,6 +135,16 @@ const Meetings = () => {
     }
   };
 
+  const handleEndMeeting = async (meetingId) => {
+    try {
+      const { data } = await axios.post("/meeting/end", { meetingId });
+      toast.success("Meeting ended/cancelled.");
+      fetchMeetings();
+    } catch (error) {
+      toast.error(error?.response?.data?.message || "Error ending meeting");
+    }
+  };
+
   if (loading) {
     return (
       <div className="mtg-loader">
@@ -250,6 +260,7 @@ const Meetings = () => {
                           {new Date(mtg.scheduledTime).toLocaleString("en-US", {
                             month: "short", day: "numeric", hour: "numeric", minute: "2-digit"
                           })}
+                          {mtg.duration && ` • ${mtg.duration} min`}
                         </div>
                       </div>
 
@@ -257,7 +268,10 @@ const Meetings = () => {
                         <Countdown targetDate={mtg.scheduledTime} />
                       </div>
 
-                      <div className="mtg-card-actions">
+                      <div className="mtg-card-actions" style={{gap: "0.5rem"}}>
+                        <button onClick={() => handleEndMeeting(mtg._id)} className="mtg-btn cancel-btn" style={{flex: 0}}>
+                          <FiX /> Cancel
+                        </button>
                         {isReady ? (
                           <Link to={`/room/${mtg.roomId}`} className="mtg-btn join-btn">
                             <FiVideo /> Join Video Call
@@ -300,6 +314,7 @@ const Meetings = () => {
                         {new Date(mtg.scheduledTime).toLocaleString("en-US", {
                           month: "short", day: "numeric", hour: "numeric", minute: "2-digit"
                         })}
+                        {mtg.duration && ` • ${mtg.duration} min`}
                       </div>
                     </div>
                     <div className="mtg-card-actions">
@@ -341,6 +356,7 @@ const Meetings = () => {
                         {new Date(mtg.scheduledTime).toLocaleString("en-US", {
                           month: "short", day: "numeric", hour: "numeric", minute: "2-digit"
                         })}
+                        {mtg.duration && ` • ${mtg.duration} min`}
                       </div>
                     </div>
                     <div className="mtg-card-actions">

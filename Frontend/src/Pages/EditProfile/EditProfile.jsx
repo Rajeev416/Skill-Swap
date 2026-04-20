@@ -229,10 +229,6 @@ const EditProfile = () => {
       toast.error("Enter atleast one Skill you want to learn");
       return false;
     }
-    if (!form.portfolioLink && !form.githubLink && !form.linkedinLink) {
-      toast.error("Enter atleast one link among portfolio, github and linkedin");
-      return false;
-    }
     const githubRegex = /^(?:http(?:s)?:\/\/)?(?:www\.)?github\.com\/[a-zA-Z0-9_-]+(?:\/)?$/;
     if (form.githubLink && githubRegex.test(form.githubLink) === false) {
       toast.error("Enter a valid github link");

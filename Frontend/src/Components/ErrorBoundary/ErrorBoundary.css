@@ -1,0 +1,60 @@
+@import url('https://fonts.googleapis.com/css2?family=Plus+Jakarta+Sans:wght@300;400;500;600;700&display=swap');
+
+.eb-container {
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  min-height: 80vh;
+  padding: 20px;
+  font-family: 'Plus Jakarta Sans', sans-serif;
+  background-color: #f8fafc;
+}
+
+.eb-card {
+  background: white;
+  max-width: 450px;
+  text-align: center;
+  padding: 50px 40px;
+  border-radius: 16px;
+  box-shadow: 0 10px 40px rgba(0,0,0,0.06);
+  border: 1px solid #e2e8f0;
+}
+
+.eb-icon {
+  font-size: 56px;
+  color: #ef4444; /* red error */
+  margin-bottom: 20px;
+}
+
+.eb-title {
+  font-size: 24px;
+  font-weight: 700;
+  color: #1e293b;
+  margin: 0 0 12px;
+}
+
+.eb-message {
+  font-size: 15px;
+  color: #64748b;
+  line-height: 1.6;
+  margin: 0 0 30px;
+}
+
+.eb-btn {
+  background: #3BB4A1;
+  color: white;
+  border: none;
+  padding: 12px 28px;
+  border-radius: 999px;
+  font-size: 15px;
+  font-weight: 600;
+  cursor: pointer;
+  transition: all 0.2s ease;
+  box-shadow: 0 4px 12px rgba(59, 180, 161, 0.3);
+}
+
+.eb-btn:hover {
+  background: #2ea08d;
+  transform: translateY(-2px);
+  box-shadow: 0 6px 16px rgba(59, 180, 161, 0.4);
+}

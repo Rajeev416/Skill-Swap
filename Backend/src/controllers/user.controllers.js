@@ -77,16 +77,19 @@ export const saveRegUnRegisteredUser = asyncHandler(async (req, res) => {
     throw new ApiError(400, "Username should be atleast 3 characters long");
   }
 
-  if (githubLink === "" && linkedinLink === "" && portfolioLink === "") {
-    throw new ApiError(400, "Please provide atleast one link");
-  }
-
+  // Links are optional, but validate format if successfully provided
   const githubRegex = /^(?:http(?:s)?:\/\/)?(?:www\.)?github\.com\/[a-zA-Z0-9_-]+(?:\/)?$/;
   const linkedinRegex = /^(?:http(?:s)?:\/\/)?(?:www\.)?linkedin\.com\/in\/[a-zA-Z0-9_-]+(?:\/)?$/;
-  if ((linkedinLink && !linkedinLink.match(linkedinRegex)) || (githubLink && !githubLink.match(githubRegex))) {
-    throw new ApiError(400, "Please provide valid github and linkedin links");
+  
+  if (githubLink && !githubLink.match(githubRegex)) {
+    throw new ApiError(400, "Please provide a valid Github link");
   }
-
+  if (linkedinLink && !linkedinLink.match(linkedinRegex)) {
+    throw new ApiError(400, "Please provide a valid Linkedin link");
+  }
+  if (portfolioLink && !portfolioLink.match(/^(http|https):\/\/[^ "]+$/)) {
+    throw new ApiError(400, "Please provide a valid Portfolio link");
+  }
   const existingUser = await User.findOne({ username: username });
 
   if (existingUser) {
@@ -211,13 +214,18 @@ export const registerUser = async (req, res) => {
   if (username.length < 3) {
     throw new ApiError(400, "Username should be atleast 3 characters long");
   }
-  if (githubLink === "" && linkedinLink === "" && portfolioLink === "") {
-    throw new ApiError(400, "Please provide atleast one link");
-  }
+  // Links are optional, but validate format if successfully provided
   const githubRegex = /^(?:http(?:s)?:\/\/)?(?:www\.)?github\.com\/[a-zA-Z0-9_-]+(?:\/)?$/;
   const linkedinRegex = /^(?:http(?:s)?:\/\/)?(?:www\.)?linkedin\.com\/in\/[a-zA-Z0-9_-]+(?:\/)?$/;
-  if ((linkedinLink && !linkedinLink.match(linkedinRegex)) || (githubLink && !githubLink.match(githubRegex))) {
-    throw new ApiError(400, "Please provide valid github and linkedin links");
+  
+  if (githubLink && !githubLink.match(githubRegex)) {
+    throw new ApiError(400, "Please provide a valid Github link");
+  }
+  if (linkedinLink && !linkedinLink.match(linkedinRegex)) {
+    throw new ApiError(400, "Please provide a valid Linkedin link");
+  }
+  if (portfolioLink && !portfolioLink.match(/^(http|https):\/\/[^ "]+$/)) {
+    throw new ApiError(400, "Please provide a valid Portfolio link");
   }
   if (education.length === 0) {
     throw new ApiError(400, "Education is required");
@@ -313,14 +321,18 @@ export const saveRegRegisteredUser = asyncHandler(async (req, res) => {
     throw new ApiError(400, "Username should be atleast 3 characters long");
   }
 
-  if (githubLink === "" && linkedinLink === "" && portfolioLink === "") {
-    throw new ApiError(400, "Please provide atleast one link");
-  }
-
+  // Links are optional, but validate format if successfully provided
   const githubRegex = /^(?:http(?:s)?:\/\/)?(?:www\.)?github\.com\/[a-zA-Z0-9_-]+(?:\/)?$/;
   const linkedinRegex = /^(?:http(?:s)?:\/\/)?(?:www\.)?linkedin\.com\/in\/[a-zA-Z0-9_-]+(?:\/)?$/;
-  if ((linkedinLink && !linkedinLink.match(linkedinRegex)) || (githubLink && !githubLink.match(githubRegex))) {
-    throw new ApiError(400, "Please provide valid github and linkedin links");
+  
+  if (githubLink && !githubLink.match(githubRegex)) {
+    throw new ApiError(400, "Please provide a valid Github link");
+  }
+  if (linkedinLink && !linkedinLink.match(linkedinRegex)) {
+    throw new ApiError(400, "Please provide a valid Linkedin link");
+  }
+  if (portfolioLink && !portfolioLink.match(/^(http|https):\/\/[^ "]+$/)) {
+    throw new ApiError(400, "Please provide a valid Portfolio link");
   }
 
   const user = await User.findOneAndUpdate(

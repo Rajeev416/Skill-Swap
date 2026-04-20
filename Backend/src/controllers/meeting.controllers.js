@@ -64,7 +64,7 @@ const meetingRejectedEmail = (receiverName, topic) => `
 export const requestMeeting = asyncHandler(async (req, res, next) => {
   console.log("\n******** Inside requestMeeting Controller function ********");
 
-  const { receiverId, scheduledTime, topic } = req.body;
+  const { receiverId, scheduledTime, topic, duration } = req.body;
   const requesterId = req.user._id;
 
   if (!receiverId || !scheduledTime) {
@@ -86,11 +86,16 @@ export const requestMeeting = asyncHandler(async (req, res, next) => {
     throw new ApiError(400, "A pending meeting request already exists with this user");
   }
 
+  let meetingDuration = Number(duration) || 30;
+  if (meetingDuration > 120) meetingDuration = 120;
+  if (meetingDuration < 15) meetingDuration = 15;
+
   const meeting = await Meeting.create({
     requester: requesterId,
     receiver: receiverId,
     scheduledTime,
     topic: topic || "Skill Swap Consultation",
+    duration: meetingDuration,
   });
 
   if (!meeting) return next(new ApiError(500, "Meeting request not created"));
@@ -241,4 +246,42 @@ export const cancelMeeting = asyncHandler(async (req, res, next) => {
   res.status(200).json(new ApiResponse(200, null, "Meeting cancelled successfully"));
 });
 
+export const endMeeting = asyncHandler(async (req, res, next) => {
+  console.log("\n******** Inside endMeeting Controller function ********");
+
+  const { roomId, meetingId } = req.body;
+  const userId = req.user._id;
+
+  let query = {};
+  if (roomId) {
+    query = { roomId, status: "Accepted" };
+  } else if (meetingId) {
+    query = { _id: meetingId, status: "Accepted" };
+  } else {
+    throw new ApiError(400, "Must provide roomId or meetingId");
+  }
+
+  const meeting = await Meeting.findOne(query);
+
+  if (!meeting) {
+    throw new ApiError(404, "Active meeting not found");
+  }
+
+  // Ensure user is authorized
+  if (meeting.requester.toString() !== userId.toString() && meeting.receiver.toString() !== userId.toString()) {
+    throw new ApiError(403, "Not authorized to end this meeting");
+  }
+
+  meeting.status = "Completed";
+  await meeting.save();
+
+  // Notify the other user in real time
+  const targetId = meeting.requester.toString() === userId.toString() ? meeting.receiver : meeting.requester;
+  req.app.get("io")?.to(targetId.toString()).emit("meeting-update", {
+    action: "end",
+    message: "A meeting has been completed/ended.",
+  });
+
+  res.status(200).json(new ApiResponse(200, meeting, "Meeting completed successfully"));
+});
 

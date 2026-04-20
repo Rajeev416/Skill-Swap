@@ -38,10 +38,14 @@ const ScrollToTop = () => {
 };
 
 const App = () => {
+  const location = useLocation();
+  // Hide navbar and footer when in a video room
+  const isVideoRoom = location.pathname.startsWith("/room/");
+
   return (
     <>
       <ScrollToTop />
-      <Header />
+      {!isVideoRoom && <Header />}
       <ToastContainer position="top-right" />
       <Routes>
         <Route element={<PrivateRoutes />}>
@@ -62,7 +66,7 @@ const App = () => {
         <Route path="*" element={<NotFound />} />
       </Routes>
 
-      <Footer />
+      {!isVideoRoom && <Footer />}
     </>
   );
 };

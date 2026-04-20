@@ -2,7 +2,64 @@ import { ApiResponse } from "../utils/ApiResponse.js";
 import { asyncHandler } from "../utils/asyncHandler.js";
 import { ApiError } from "../utils/ApiError.js";
 import { Meeting } from "../models/meeting.model.js";
+import { User } from "../models/user.model.js";
+import { sendMail } from "../utils/SendMail.js";
 import crypto from "crypto";
+
+// ─── Email Templates ──────────────────────────────────────────
+const meetingRequestEmail = (requesterName, topic, scheduledTime) => `
+  <div style="font-family:'Segoe UI',Arial,sans-serif;max-width:520px;margin:0 auto;background:#0f172a;border-radius:16px;overflow:hidden;border:1px solid rgba(59,180,161,.25)">
+    <div style="background:linear-gradient(135deg,#0d9488,#3bb4a1);padding:28px 32px">
+      <h1 style="margin:0;color:#fff;font-size:22px">📹 New Meeting Request</h1>
+    </div>
+    <div style="padding:28px 32px;color:#e2e8f0">
+      <p style="margin:0 0 12px;font-size:15px"><strong style="color:#5eead4">${requesterName}</strong> wants to schedule a video call with you.</p>
+      <div style="background:rgba(255,255,255,.05);border-radius:10px;padding:16px;margin:16px 0">
+        <p style="margin:0 0 8px;font-size:14px;color:#94a3b8">📝 Topic</p>
+        <p style="margin:0 0 16px;font-size:15px;color:#fff">${topic}</p>
+        <p style="margin:0 0 8px;font-size:14px;color:#94a3b8">🕐 Scheduled Time</p>
+        <p style="margin:0;font-size:15px;color:#fff">${new Date(scheduledTime).toLocaleString("en-US", { dateStyle: "full", timeStyle: "short" })}</p>
+      </div>
+      <p style="margin:16px 0 0;font-size:14px;color:#94a3b8">Log in to SkillSwap to accept or decline this request.</p>
+    </div>
+  </div>
+`;
+
+const meetingAcceptedEmail = (receiverName, topic, scheduledTime, roomId) => `
+  <div style="font-family:'Segoe UI',Arial,sans-serif;max-width:520px;margin:0 auto;background:#0f172a;border-radius:16px;overflow:hidden;border:1px solid rgba(59,180,161,.25)">
+    <div style="background:linear-gradient(135deg,#0d9488,#3bb4a1);padding:28px 32px">
+      <h1 style="margin:0;color:#fff;font-size:22px">✅ Meeting Accepted!</h1>
+    </div>
+    <div style="padding:28px 32px;color:#e2e8f0">
+      <p style="margin:0 0 12px;font-size:15px"><strong style="color:#5eead4">${receiverName}</strong> accepted your video call request!</p>
+      <div style="background:rgba(255,255,255,.05);border-radius:10px;padding:16px;margin:16px 0">
+        <p style="margin:0 0 8px;font-size:14px;color:#94a3b8">📝 Topic</p>
+        <p style="margin:0 0 16px;font-size:15px;color:#fff">${topic}</p>
+        <p style="margin:0 0 8px;font-size:14px;color:#94a3b8">🕐 Scheduled Time</p>
+        <p style="margin:0;font-size:15px;color:#fff">${new Date(scheduledTime).toLocaleString("en-US", { dateStyle: "full", timeStyle: "short" })}</p>
+      </div>
+      <p style="margin:16px 0 0;font-size:14px;color:#94a3b8">Visit the Meetings page on SkillSwap to join the call when it's time.</p>
+    </div>
+  </div>
+`;
+
+const meetingRejectedEmail = (receiverName, topic) => `
+  <div style="font-family:'Segoe UI',Arial,sans-serif;max-width:520px;margin:0 auto;background:#0f172a;border-radius:16px;overflow:hidden;border:1px solid rgba(59,180,161,.25)">
+    <div style="background:linear-gradient(135deg,#ef4444,#f87171);padding:28px 32px">
+      <h1 style="margin:0;color:#fff;font-size:22px">Meeting Declined</h1>
+    </div>
+    <div style="padding:28px 32px;color:#e2e8f0">
+      <p style="margin:0 0 12px;font-size:15px"><strong style="color:#fca5a5">${receiverName}</strong> declined your meeting request.</p>
+      <div style="background:rgba(255,255,255,.05);border-radius:10px;padding:16px;margin:16px 0">
+        <p style="margin:0 0 8px;font-size:14px;color:#94a3b8">📝 Topic</p>
+        <p style="margin:0;font-size:15px;color:#fff">${topic}</p>
+      </div>
+      <p style="margin:16px 0 0;font-size:14px;color:#94a3b8">You can send another request with a different time on SkillSwap.</p>
+    </div>
+  </div>
+`;
+
+// ─── Controllers ──────────────────────────────────────────────
 
 export const requestMeeting = asyncHandler(async (req, res, next) => {
   console.log("\n******** Inside requestMeeting Controller function ********");
@@ -38,6 +95,21 @@ export const requestMeeting = asyncHandler(async (req, res, next) => {
 
   if (!meeting) return next(new ApiError(500, "Meeting request not created"));
 
+  // Send email notification to the receiver
+  try {
+    const receiver = await User.findById(receiverId).select("email name");
+    const requester = await User.findById(requesterId).select("name");
+    if (receiver?.email) {
+      await sendMail(
+        receiver.email,
+        `📹 New Meeting Request from ${requester.name}`,
+        meetingRequestEmail(requester.name, topic || "Skill Swap Consultation", scheduledTime)
+      );
+    }
+  } catch (emailErr) {
+    console.error("Failed to send meeting request email:", emailErr.message);
+  }
+
   res.status(201).json(new ApiResponse(201, meeting, "Meeting requested successfully"));
 });
 
@@ -50,9 +122,9 @@ export const getMeetings = asyncHandler(async (req, res, next) => {
   const meetings = await Meeting.find({
     $or: [{ requester: userId }, { receiver: userId }],
   })
-    .populate("requester", "username firstname lastname profilePic")
-    .populate("receiver", "username firstname lastname profilePic")
-    .sort({ scheduledTime: 1 });
+    .populate("requester", "username firstname lastname picture name email")
+    .populate("receiver", "username firstname lastname picture name email")
+    .sort({ scheduledTime: -1 });
 
   return res.status(200).json(new ApiResponse(200, meetings, "Meetings fetched successfully"));
 });
@@ -75,6 +147,21 @@ export const acceptMeeting = asyncHandler(async (req, res, next) => {
   meeting.roomId = roomId;
   await meeting.save();
 
+  // Send email notification to the requester
+  try {
+    const requester = await User.findById(meeting.requester).select("email name");
+    const receiver = await User.findById(receiverId).select("name");
+    if (requester?.email) {
+      await sendMail(
+        requester.email,
+        `✅ ${receiver.name} accepted your meeting request!`,
+        meetingAcceptedEmail(receiver.name, meeting.topic, meeting.scheduledTime, roomId)
+      );
+    }
+  } catch (emailErr) {
+    console.error("Failed to send meeting accepted email:", emailErr.message);
+  }
+
   res.status(200).json(new ApiResponse(200, meeting, "Meeting accepted successfully"));
 });
 
@@ -93,5 +180,57 @@ export const rejectMeeting = asyncHandler(async (req, res, next) => {
   meeting.status = "Rejected";
   await meeting.save();
 
+  // Send email notification to the requester
+  try {
+    const requester = await User.findById(meeting.requester).select("email name");
+    const receiver = await User.findById(receiverId).select("name");
+    if (requester?.email) {
+      await sendMail(
+        requester.email,
+        `Meeting request declined by ${receiver.name}`,
+        meetingRejectedEmail(receiver.name, meeting.topic)
+      );
+    }
+  } catch (emailErr) {
+    console.error("Failed to send meeting rejected email:", emailErr.message);
+  }
+
   res.status(200).json(new ApiResponse(200, null, "Meeting rejected successfully"));
 });
+
+export const cancelMeeting = asyncHandler(async (req, res, next) => {
+  console.log("\n******** Inside cancelMeeting Controller function ********");
+
+  const { meetingId } = req.body;
+  const requesterId = req.user._id;
+
+  const meeting = await Meeting.findOne({ _id: meetingId, requester: requesterId, status: "Pending" });
+
+  if (!meeting) {
+    throw new ApiError(404, "Pending meeting not found or you are not authorized to cancel it");
+  }
+
+  await Meeting.deleteOne({ _id: meetingId });
+
+  res.status(200).json(new ApiResponse(200, null, "Meeting cancelled successfully"));
+});
+
+export const getZegoConfig = asyncHandler(async (req, res) => {
+  console.log("\n******** Inside getZegoConfig Controller function ********");
+
+  const appID = process.env.ZEGO_APP_ID;
+  const serverSecret = process.env.ZEGO_SERVER_SECRET;
+
+  if (!appID || !serverSecret) {
+    throw new ApiError(500, "ZegoCloud configuration is missing on the server");
+  }
+
+  res.status(200).json(
+    new ApiResponse(
+      200,
+      { appID: Number(appID), serverSecret },
+      "Zego configuration fetched successfully"
+    )
+  );
+});
+

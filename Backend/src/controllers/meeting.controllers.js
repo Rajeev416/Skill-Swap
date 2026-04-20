@@ -215,22 +215,4 @@ export const cancelMeeting = asyncHandler(async (req, res, next) => {
   res.status(200).json(new ApiResponse(200, null, "Meeting cancelled successfully"));
 });
 
-export const getZegoConfig = asyncHandler(async (req, res) => {
-  console.log("\n******** Inside getZegoConfig Controller function ********");
-
-  const appID = process.env.ZEGO_APP_ID;
-  const serverSecret = process.env.ZEGO_SERVER_SECRET;
-
-  if (!appID || !serverSecret) {
-    throw new ApiError(500, "ZegoCloud configuration is missing on the server");
-  }
-
-  res.status(200).json(
-    new ApiResponse(
-      200,
-      { appID: Number(appID), serverSecret },
-      "Zego configuration fetched successfully"
-    )
-  );
-});
 

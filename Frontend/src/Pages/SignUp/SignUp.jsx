@@ -11,14 +11,14 @@ const SignUp = () => {
   const navigate = useNavigate();
 
   const handleGoogleSignup = () => {
-    window.location.href = "http://localhost:8000/auth/google";
+    window.location.href = `${import.meta.env.VITE_SERVER_URL}/auth/google`;
   };
 
   const handleSignupSubmit = async (e) => {
     e.preventDefault();
     setLoading(true);
     try {
-      const { data } = await axios.post("http://localhost:8000/auth/signup", formData);
+      const { data } = await axios.post(`${import.meta.env.VITE_SERVER_URL}/auth/signup`, formData);
       toast.success(data.message || "Verification email sent! Please check your inbox.");
       setFormData({ name: "", email: "", password: "" });
     } catch (error) {

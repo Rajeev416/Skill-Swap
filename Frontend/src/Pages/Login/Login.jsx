@@ -11,7 +11,7 @@ const Login = () => {
   const navigate = useNavigate();
 
   const handleGoogleLogin = () => {
-    window.location.href = "http://localhost:8000/auth/google";
+    window.location.href = `${import.meta.env.VITE_SERVER_URL}/auth/google`;
   };
 
   const handleLoginSubmit = async (e) => {
@@ -19,7 +19,7 @@ const Login = () => {
     setLoading(true);
     try {
       // Must include withCredentials if they are not enabled by default in axios instance
-      const { data } = await axios.post("http://localhost:8000/auth/login", formData, {
+      const { data } = await axios.post(`${import.meta.env.VITE_SERVER_URL}/auth/login`, formData, {
         withCredentials: true,
       });
       toast.success(data.message || "Logged in successfully!");

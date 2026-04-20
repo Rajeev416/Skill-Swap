@@ -735,7 +735,7 @@ const VideoRoom = () => {
           </button>
 
           <button
-            className={`vr-ctrl-btn ${isScreenSharing ? "active" : ""}`}
+            className={`vr-ctrl-btn vr-screen-share-btn ${isScreenSharing ? "active" : ""}`}
             onClick={toggleScreenShare}
             title={isScreenSharing ? "Stop sharing" : "Share screen"}
             disabled={connectionState !== "connected"}

@@ -118,17 +118,20 @@ export const getMeetings = asyncHandler(async (req, res, next) => {
 
   // Auto-complete any accepted meetings whose duration has elapsed
   const now = new Date();
-  const expiredMeetings = await Meeting.find({
+  const activeMeetings = await Meeting.find({
     $or: [{ requester: userId }, { receiver: userId }],
     status: "Accepted",
   });
 
-  for (const mtg of expiredMeetings) {
-    const endTime = new Date(mtg.scheduledTime.getTime() + (mtg.duration || 30) * 60 * 1000);
-    if (now >= endTime) {
-      mtg.status = "Completed";
-      await mtg.save();
-    }
+  const expiredIds = activeMeetings
+    .filter((mtg) => now >= new Date(mtg.scheduledTime.getTime() + (mtg.duration || 30) * 60 * 1000))
+    .map((mtg) => mtg._id);
+
+  if (expiredIds.length > 0) {
+    await Meeting.updateMany(
+      { _id: { $in: expiredIds } },
+      { $set: { status: "Completed" } }
+    );
   }
 
   // Get all meetings where the user is either the requester or the receiver

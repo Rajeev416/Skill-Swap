@@ -79,7 +79,7 @@ const Profile = () => {
       setMeetingLoading(true);
       const { data } = await axios.post(`/meeting/request`, { 
         receiverId: profileUser._id, 
-        scheduledTime: meetingTime, 
+        scheduledTime: new Date(meetingTime).toISOString(), 
         topic: meetingTopic 
       });
       toast.success(data.message);

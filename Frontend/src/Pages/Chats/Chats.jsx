@@ -78,12 +78,16 @@ const Chats = () => {
 
       const { data } = await axios.get("/chat");
       if (tempUser?._id) {
-        const temp = data.data.map((chat) => ({
-          id: chat._id,
-          name: chat?.users.find((u) => u?._id !== tempUser?._id)?.name,
-          picture: chat?.users.find((u) => u?._id !== tempUser?._id)?.picture,
-          username: chat?.users.find((u) => u?._id !== tempUser?._id)?.username,
-        }));
+        const temp = data.data.map((chat) => {
+          const otherUser = chat?.users.find((u) => u?._id !== tempUser?._id);
+          return {
+            id: chat._id,
+            userId: otherUser?._id,
+            name: otherUser?.name,
+            picture: otherUser?.picture,
+            username: otherUser?.username,
+          };
+        });
         chatsCache.current = temp;
         setChats(temp);
       }
@@ -253,7 +257,7 @@ const Chats = () => {
     setScheduleLoading(true);
     try {
       await axios.post("/meeting/request", {
-        receiverId: selectedChat._id,
+        receiverId: selectedChat.userId,
         scheduledTime: selectedDateTime.toISOString(),
         topic: "Video Call Request from Chat",
       });
